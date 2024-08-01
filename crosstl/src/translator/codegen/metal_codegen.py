@@ -140,6 +140,7 @@ class MetalCodeGen:
                 for i, (vtype, name) in enumerate(self.vertex_item.outputs):
                     if self.gl_position:
                         code += f"    float4 position [[position]];\n"
+                        self.gl_position = False
                     code += f"    {self.map_type(vtype)} {name};\n"
                 code += "};\n\n"
             code += (
@@ -184,14 +185,15 @@ class MetalCodeGen:
                 if function_node.name == "main":
                     params = "Vertex_INPUT input [[stage_in]]"
                     return_type = "vertex Vertex_OUTPUT"
+                    code += f"{return_type} vertex_main({params}) {{\n"
                 else:
                     params = ", ".join(
                         f"{self.map_type(param[0])} {param[1]}"
                         for param in function_node.params
                     )
                     return_type = self.map_type(function_node.return_type)
+                    code += f"{return_type} {function_node.name}({params}) {{\n"
 
-                code += f"{return_type} vertex_main({params}) {{\n"
                 if function_node.name == "main":
                     code += "    Vertex_OUTPUT output;\n"
                 for stmt in function_node.body:
@@ -204,14 +206,14 @@ class MetalCodeGen:
                 if function_node.name == "main":
                     params = "Fragment_INPUT input [[stage_in]]"
                     return_type = "fragment Fragment_OUTPUT"
+                    code += f"{return_type} fragment_main({params}) {{\n"
                 else:
                     params = ", ".join(
                         f"{self.map_type(param[0])} {param[1]}"
                         for param in function_node.params
                     )
                     return_type = self.map_type(function_node.return_type)
-
-                code += f"{return_type} fragment_main({params}) {{\n"
+                    code += f"{return_type} {function_node.name}({params}) {{\n"
                 if function_node.name == "main":
                     code += "    Fragment_OUTPUT output;\n"
                 for stmt in function_node.body:
@@ -264,7 +266,7 @@ class MetalCodeGen:
             return f"{self.map_type(node.name.vtype)} {node.name.name} = {self.generate_expression(node.value, shader_type)}"
         else:
             lhs = self.generate_expression(node.name, shader_type)
-            if lhs == "gl_Position":
+            if lhs == "gl_Position" or lhs == "gl_position":
                 return f"output.position = {self.generate_expression(node.value, shader_type)}"
             return f"{lhs} = {self.generate_expression(node.value, shader_type)}"
 
